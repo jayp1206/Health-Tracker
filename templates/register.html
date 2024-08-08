@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Register
+{% endblock %}
+
+{% block main %}
+<h1>Register</h1>
+<br>
+<form action="/register" method="post">
+    <div class="mb-3">
+        <input autocomplete="off" autofocus class="form-control mx-auto" style="width:20vw" name="username" placeholder="Username" type="text">
+    </div>
+    <div class="mb-3">
+        <input class="form-control mx-auto" style="width:20vw" name="password" placeholder="Password" type="password">
+    </div>
+    <div class="mb-3">
+        <input class="form-control mx-auto" style="width:20vw" name="confirmation" placeholder="Confirm Password" type="password">
+    </div>
+    <div class="mb-3">
+        Date of Birth:
+        <input class="form-control mx-auto" style="width:20vw" name="dob" placeholder="Date of Birth" id = "date" type="date">
+    </div>
+
+    <button class="btn btn-secondary" type="submit">Register</button>
+</form>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').setAttribute('max', today);
+});
+
+</script>
+{% endblock %}  

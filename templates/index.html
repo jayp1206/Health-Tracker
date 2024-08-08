@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+
+{% block title %}
+My Data
+{% endblock %}
+
+{% block main %}
+<p>
+    <ul class="list-group">
+    {% for suggestion in suggestions %}
+        <li class="list-group-item list-group-item-info">{{ suggestion }}</li>
+    {% endfor %}
+    </ul>
+</p>
+<br>
+<table class="table">
+    <thead class="thead-dark">
+        <tr>    
+            <th scope="column">Date/Time</th>
+            <th scope="column">BPM</th>
+            <th scope="column">BP (Sys/Dia)</th>
+            <th scope="column">Weight</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row[1] }}/{{ row[2] }}/{{ row[0] }}, {{ row[3] }}</td>
+            <td>{{ row[4] }}</td>
+            <td>{{ row[5] }}/{{ row[6] }}</td>
+            <td>{{ row[7] }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

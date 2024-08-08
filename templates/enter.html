@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Enter Data
+{% endblock %}
+
+{% block main %}
+<h1>Enter Data</h1>
+<br>
+<form action="/enter" method="post">
+    <div class="mb-3">
+        <input autocomplete="off" style="width:20vw" class="form-control mx-auto w-auto" name="bpm" placeholder="BPM (resting)" type="number" max="300" min="0">
+    </div>
+    <div class="mb-3">
+        <input autocomplete="off" style="width:20vw" class="form-control mx-auto w-auto" name="sys" placeholder="BP (Sys)" type="number" max="350" min="0">
+    </div>
+    <div class="mb-3">
+        <input autocomplete="off" style="width:20vw" class="form-control mx-auto w-auto" name="dia" placeholder="BP (Dia)" type="number" max="250" min="0">
+    </div>
+    <div class="mb-3">
+        <input autocomplete="off" style="width:20vw" class="form-control mx-auto w-auto" name="weight" placeholder="Weight (Lbs)" type="number" max="1500" min="0">
+    </div>
+    <button class="btn btn-secondary" type="submit">Enter</button>
+</form>
+{% endblock %}
