@@ -33,6 +33,7 @@ def favicon():
 @app.route('/')
 @login_required
 def index():
+         session.pop("shared_view", None)
          conn = sqlite3.connect('health-tracker.db')
          cur = conn.cursor()
 
@@ -186,3 +187,73 @@ def enter():
          return redirect("/")
     else:
         return render_template("enter.html")
+    
+@app.route("/share", methods=["GET", "POST"])
+def share():
+    if request.method == "GET":
+        conn = sqlite3.connect('health-tracker.db')
+        cur = conn.cursor()
+
+        cur.execute('''SELECT owner_id, username FROM shared JOIN users 
+                        ON shared.owner_id = users.id WHERE viewer_id = ?''', (session["user_id"],))
+
+        accessible_users = cur.fetchall()
+
+        cur.execute('''SELECT viewer_id, username FROM shared JOIN users 
+                        ON shared.viewer_id = users.id WHERE owner_id = ?''', (session["user_id"],))
+            
+        shared_users = cur.fetchall()
+
+        cur.close()
+        conn.close()
+        return render_template("share.html", accessible_users=accessible_users, shared_users=shared_users)
+    else:
+        if not request.form.get("share-user"):
+            flash("Must enter username to share with", 'error')
+            return render_template("share.html")
+
+        new_shared_user = request.form.get("share-user")
+
+        conn = sqlite3.connect('health-tracker.db', autocommit=True)
+        cur = conn.cursor()
+
+        cur.execute('''SELECT username FROM shared JOIN users 
+                    ON shared.owner_id = users.id WHERE owner_id = ?''', (session["user_id"],))
+        
+        shared_users = cur.fetchall()
+
+        cur.execute('''SELECT username FROM users WHERE id != ?''', (session["user_id"],))
+
+        all_users = cur.fetchall()
+        
+        for user in shared_users:
+            if new_shared_user == user[0]:
+                cur.close()
+                conn.close()
+                flash(f"Already sharing with {new_shared_user}", 'error')
+                return redirect("/share")
+        
+        for user in all_users:
+            if new_shared_user == user[0]:
+                break
+        else:
+            cur.close()
+            conn.close()
+            flash(f"{new_shared_user} is not an valid user", 'error')
+            return redirect("/share")
+        
+        cur.execute("SELECT id FROM users WHERE username = ?", (new_shared_user,))
+        new_shared_user_id = cur.fetchone()[0]
+        
+        cur.execute('''INSERT INTO shared (owner_id, viewer_id) VALUES (?, ?)''', (session["user_id"], new_shared_user_id))
+
+        cur.close()
+        conn.close()
+        flash(f"Successfully shared with {new_shared_user}", 'success')
+        return redirect("/share")
+
+@app.route("/shared_data", methods=["GET", "POST"])
+def shared_data():
+    if request.method =="POST":
+        session["shared_view"] = request.form.get("user")
+        return render_template("shared_data.html", user=session["shared_view"])
