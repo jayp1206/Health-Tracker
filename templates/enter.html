@@ -20,6 +20,13 @@ Enter Data
     <div class="mb-3">
         <input autocomplete="off" style="width:20vw" class="form-control mx-auto w-auto" name="weight" placeholder="Weight (Lbs)" type="number" max="1500" min="0">
     </div>
+    <div class="mb-3">
+        Date/Time (Leave Blank if Current):
+        <input class="form-control mx-auto" style="width:20vw" name="date" id = "date" type="date">
+    </div>
+    <div class="mb-3">
+        <input class="form-control mx-auto" style="width:20vw" type="time" id="time" name="time">
+    </div>
     <button class="btn btn-secondary" type="submit">Enter</button>
 </form>
 {% endblock %}

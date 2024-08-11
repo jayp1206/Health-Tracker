@@ -6,7 +6,7 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 from functools import wraps
-from helpers import calculate_age, get_suggestions, login_required
+from helpers import calculate_age, get_suggestions, login_required, healthy, zip_filter
 
 
 app = Flask(__name__)
@@ -15,7 +15,7 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-
+app.jinja_env.filters['zip'] = zip_filter
 
 @app.after_request
 def after_request(response):
@@ -33,29 +33,45 @@ def favicon():
 @app.route('/')
 @login_required
 def index():
-         session.pop("shared_view", None)
-         conn = sqlite3.connect('health-tracker.db')
-         cur = conn.cursor()
+    session["shared_view_id"] = None
+    session["shared_view_username"] = None
+    conn = sqlite3.connect('health-tracker.db')
+    cur = conn.cursor()
 
-         cur.execute('''SELECT year, month, day, time, bpm, sys, dia, weight FROM records WHERE user_id = ? 
+    cur.execute('''SELECT year, month, day, time, bpm, sys, dia, weight, id FROM records WHERE user_id = ? 
                      ORDER BY year DESC, month DESC, day DESC, time DESC''', (session["user_id"],))
         
-         rows = cur.fetchall()
+    rows = cur.fetchall()
 
-         cur.execute('''SELECT dob_year, dob_month, dob_day FROM users WHERE id = ?''', (session["user_id"],))
-         dob = cur.fetchone()
+    cur.execute('''SELECT dob_year, dob_month, dob_day FROM users WHERE id = ?''', (session["user_id"],))
+    dob = cur.fetchone()
          
-         dob_year = dob[0]
-         dob_month = dob[1]
-         dob_day = dob[2]
+    dob_year = dob[0]
+    dob_month = dob[1]
+    dob_day = dob[2]
     
-         cur.close()
-         conn.close()
+    cur.close()
+    conn.close()
 
-         age = calculate_age(dob_year, dob_month, dob_day)
-         suggestions = get_suggestions(age)
+    age = calculate_age(dob_year, dob_month, dob_day)
+    suggestions = get_suggestions(age)
     
-         return render_template("index.html", rows=rows, suggestions=suggestions)
+    return render_template("index.html", rows=rows, suggestions=suggestions)
+
+@app.route("/delete_entry", methods={"POST"})
+def delete_entry():
+    delete_record_id = request.form.get("record_id")
+
+    conn = sqlite3.connect('health-tracker.db', autocommit=True)
+    cur = conn.cursor()
+
+    cur.execute('''DELETE FROM records WHERE id = ?''', (delete_record_id,))
+
+    cur.close()
+    conn.close()
+    flash("Sucessfully deleted entry", 'success')
+    return redirect("/")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -160,47 +176,76 @@ def register():
     
 
 @app.route("/enter", methods=["GET", "POST"])
+@login_required
 def enter():
+    session["shared_view_id"] = None
+    session["shared_view_username"] = None
     if request.method == "POST":
          
-         bpm = request.form.get("bpm")
-         sys = (request.form.get("sys"))
-         dia = (request.form.get("dia"))
-         weight = (request.form.get("weight"))
+        bpm = request.form.get("bpm")
+        sys = (request.form.get("sys"))
+        dia = (request.form.get("dia"))
+        weight = (request.form.get("weight"))
 
-         if not bpm and not sys and not dia and not weight:
-             flash("At least one field must be filled", 'error')
-             return render_template('enter.html')
+        if not bpm and not sys and not dia and not weight:
+            flash("At least one field must be filled", 'error')
+            return render_template('enter.html')
 
-         now = datetime.now()
+        now = datetime.now()
+
+        year = 0
+        month = 0
+        day = 0
+        time = ""
+
+        if request.form.get("date"):
+            date = request.form.get("date")
+            year = date[0:4]
+            month = date[5:7]
+            day = date[8:10]
+        else:
+            year = now.year
+            month = now.month
+            day = now.day
+        
+        if request.form.get("time"):
+            input_time = request.form.get("time")
+            time_obj = datetime.strptime(input_time, '%H:%M')
+            time = time_obj.strftime('%H:%M:%S')
+        else:
+            time = now.strftime('%H:%M:%S')
     
-         conn = sqlite3.connect('health-tracker.db', autocommit=True)
-         cur = conn.cursor()
+        conn = sqlite3.connect('health-tracker.db', autocommit=True)
+        cur = conn.cursor()
 
-         cur.execute('''INSERT INTO records (bpm, sys, dia, weight, year, month, day, time, user_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (bpm, sys, dia, weight, now.year, now.month, now.day, now.strftime('%H:%M:%S'), session["user_id"]))
+        cur.execute('''INSERT INTO records (bpm, sys, dia, weight, year, month, day, time, user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (bpm, sys, dia, weight, year, month, day, time, session["user_id"]))
          
-         cur.close()
-         conn.close()
+        cur.close()
+        conn.close()
 
-         flash("Successfully Logged Data!", 'success')
-         return redirect("/")
+        flash("Successfully Logged Data!", 'success')
+        return redirect("/")
     else:
         return render_template("enter.html")
     
 @app.route("/share", methods=["GET", "POST"])
+@login_required
 def share():
+    session["shared_view_id"] = None
+    session["shared_view_username"] = None
+
     if request.method == "GET":
         conn = sqlite3.connect('health-tracker.db')
         cur = conn.cursor()
 
-        cur.execute('''SELECT owner_id, username FROM shared JOIN users 
-                        ON shared.owner_id = users.id WHERE viewer_id = ?''', (session["user_id"],))
+        cur.execute('''SELECT id, username FROM users WHERE id IN (
+                    SELECT owner_id FROM shared WHERE viewer_id = ?)''', (session["user_id"],))
 
         accessible_users = cur.fetchall()
 
-        cur.execute('''SELECT viewer_id, username FROM shared JOIN users 
-                        ON shared.viewer_id = users.id WHERE owner_id = ?''', (session["user_id"],))
+        cur.execute('''SELECT id, username FROM users WHERE id IN (
+                    SELECT viewer_id FROM shared WHERE owner_id = ?)''', (session["user_id"],))
             
         shared_users = cur.fetchall()
 
@@ -210,21 +255,31 @@ def share():
     else:
         if not request.form.get("share-user"):
             flash("Must enter username to share with", 'error')
-            return render_template("share.html")
+            return redirect("/share")
 
         new_shared_user = request.form.get("share-user")
 
         conn = sqlite3.connect('health-tracker.db', autocommit=True)
         cur = conn.cursor()
 
-        cur.execute('''SELECT username FROM shared JOIN users 
-                    ON shared.owner_id = users.id WHERE owner_id = ?''', (session["user_id"],))
+        cur.execute('''SELECT username FROM users WHERE id IN (
+                    SELECT viewer_id FROM shared WHERE owner_id = ?)''', (session["user_id"],))
         
         shared_users = cur.fetchall()
 
         cur.execute('''SELECT username FROM users WHERE id != ?''', (session["user_id"],))
 
         all_users = cur.fetchall()
+
+        cur.execute('''SELECT username FROM users WHERE id = ?''', (session["user_id"],))
+
+        current_user = cur.fetchone()[0]
+
+        if new_shared_user == current_user:
+            cur.close()
+            conn.close()
+            flash("You cannot share with yourself", 'error')
+            return redirect("/share")
         
         for user in shared_users:
             if new_shared_user == user[0]:
@@ -251,9 +306,219 @@ def share():
         conn.close()
         flash(f"Successfully shared with {new_shared_user}", 'success')
         return redirect("/share")
+    
+@app.route("/unshare", methods=["POST"])
+def unshare():
+    remove_user_id = request.form.get("user_id")
+    remove_username = request.form.get("username")
+
+    conn = sqlite3.connect('health-tracker.db', autocommit=True)
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM shared WHERE owner_id = ? AND viewer_id = ?", (session["user_id"], remove_user_id))
+
+    cur.close()
+    conn.close()
+    flash(f"Stopped sharing with {remove_username}", 'success')
+    return redirect("/share")
+
 
 @app.route("/shared_data", methods=["GET", "POST"])
+@login_required
 def shared_data():
-    if request.method =="POST":
-        session["shared_view"] = request.form.get("user")
-        return render_template("shared_data.html", user=session["shared_view"])
+    if request.method == "POST":
+        session["shared_view_id"] = request.form.get("user_id")
+        session["shared_view_username"] = request.form.get("username")
+        return redirect("/shared_data")
+    else:
+         if not session["shared_view_id"]:
+             return redirect("/share")
+         conn = sqlite3.connect('health-tracker.db')
+         cur = conn.cursor()
+
+         cur.execute('''SELECT year, month, day, time, bpm, sys, dia, weight, id FROM records WHERE user_id = ? 
+                     ORDER BY year DESC, month DESC, day DESC, time DESC''', (session["shared_view_id"],))
+        
+         rows = cur.fetchall()
+
+         cur.execute('''SELECT dob_year, dob_month, dob_day FROM users WHERE id = ?''', (session["shared_view_id"],))
+         dob = cur.fetchone()
+         
+         dob_year = dob[0]
+         dob_month = dob[1]
+         dob_day = dob[2]
+    
+         cur.close()
+         conn.close()
+
+         age = calculate_age(dob_year, dob_month, dob_day)
+         suggestions = get_suggestions(age)
+    
+         return render_template("shared_data.html", rows=rows, suggestions=suggestions, username=session["shared_view_username"])
+    
+@app.route("/bpm_graph")
+@login_required
+def bpm_graph():
+    session["shared_view_id"] = None
+    session["shared_view_username"] = None
+    conn = sqlite3.connect('health-tracker.db')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT year, month, day, time, bpm FROM records WHERE user_id = ? 
+                ORDER BY year ASC, month ASC, day ASC, time ASC''', (session["user_id"],))
+
+    data = cur.fetchall()
+    
+    dates = [f"{row[0]}-{row[1]:02d}-{row[2]:02d}" for row in data]
+    times = [row[3] for row in data]
+    bpms = [row[4] for row in data]
+
+    datetimes = [f"{date}T{time}" for date, time in zip(dates, times)]
+
+    cur.execute('''SELECT dob_year, dob_month, dob_day FROM users WHERE id = ?''', (session["user_id"],))
+    dob = cur.fetchall()
+    healthy_results = healthy(calculate_age(dob[0][0], dob[0][1], dob[0][2]), "bpm")
+
+    cur.close()
+    conn.close()
+
+    return render_template("bpm_graph.html", owner="Your", datetimes=datetimes, bpms=bpms, max_healthy=healthy_results[0], min_healthy=healthy_results[1])
+
+@app.route("/shared_bpm_graph")
+@login_required
+def shared_bpm_graph():
+    if not session["shared_view_id"]:
+        return redirect("/share")
+    
+    conn = sqlite3.connect('health-tracker.db')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT year, month, day, time, bpm FROM records WHERE user_id = ? 
+                ORDER BY year ASC, month ASC, day ASC, time ASC''', (session["shared_view_id"],))
+
+    data = cur.fetchall()
+    
+    dates = [f"{row[0]}-{row[1]:02d}-{row[2]:02d}" for row in data]
+    times = [row[3] for row in data]
+    bpms = [row[4] for row in data]
+
+    datetimes = [f"{date}T{time}" for date, time in zip(dates, times)]
+
+    cur.execute('''SELECT dob_year, dob_month, dob_day FROM users WHERE id = ?''', (session["shared_view_id"],))
+    dob = cur.fetchall()
+    healthy_results = healthy(calculate_age(dob[0][0], dob[0][1], dob[0][2]), "bpm")
+
+    cur.close()
+    conn.close()
+
+    return render_template("bpm_graph.html", owner=f"{session["shared_view_username"]}'s", datetimes=datetimes, bpms=bpms, max_healthy=healthy_results[0], min_healthy=healthy_results[1])
+
+@app.route("/weight_graph")
+@login_required
+def weight_graph():
+    session["shared_view_id"] = None
+    session["shared_view_username"] = None
+    conn = sqlite3.connect('health-tracker.db')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT year, month, day, time, weight FROM records WHERE user_id = ? 
+                ORDER BY year ASC, month ASC, day ASC, time ASC''', (session["user_id"],))
+
+    data = cur.fetchall()
+    
+    dates = [f"{row[0]}-{row[1]:02d}-{row[2]:02d}" for row in data]
+    times = [row[3] for row in data]
+    weights = [row[4] for row in data]
+
+    datetimes = [f"{date}T{time}" for date, time in zip(dates, times)]
+
+    cur.close()
+    conn.close()
+
+    return render_template("weight_graph.html", owner="Your", datetimes=datetimes, weights=weights)
+
+@app.route("/shared_weight_graph")
+@login_required
+def shared_weight_graph():
+    if not session["shared_view_id"]:
+        return redirect("/share")
+    
+    conn = sqlite3.connect('health-tracker.db')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT year, month, day, time, weight FROM records WHERE user_id = ? 
+                ORDER BY year ASC, month ASC, day ASC, time ASC''', (session["shared_view_id"],))
+
+    data = cur.fetchall()
+    
+    dates = [f"{row[0]}-{row[1]:02d}-{row[2]:02d}" for row in data]
+    times = [row[3] for row in data]
+    weights = [row[4] for row in data]
+
+    datetimes = [f"{date}T{time}" for date, time in zip(dates, times)]
+
+    cur.close()
+    conn.close()
+
+    return render_template("weight_graph.html", owner=f"{session["shared_view_username"]}'s", datetimes=datetimes, weights=weights)
+
+@app.route("/bp_graph")
+@login_required
+def bp_graph():
+    session["shared_view_id"] = None
+    session["shared_view_username"] = None
+    conn = sqlite3.connect('health-tracker.db')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT year, month, day, time, sys, dia FROM records WHERE user_id = ? 
+                ORDER BY year ASC, month ASC, day ASC, time ASC''', (session["user_id"],))
+
+    data = cur.fetchall()
+    
+    dates = [f"{row[0]}-{row[1]:02d}-{row[2]:02d}" for row in data]
+    times = [row[3] for row in data]
+    syss = [row[4] for row in data]
+    dias = [row[5] for row in data]
+
+    datetimes = [f"{date}T{time}" for date, time in zip(dates, times)]
+
+    cur.execute('''SELECT dob_year, dob_month, dob_day FROM users WHERE id = ?''', (session["user_id"],))
+    dob = cur.fetchall()
+    sys_healthy_results = healthy(calculate_age(dob[0][0], dob[0][1], dob[0][2]), "sys")
+    dia_healthy_results = healthy(calculate_age(dob[0][0], dob[0][1], dob[0][2]), "dia")
+
+    cur.close()
+    conn.close()
+
+    return render_template("bp_graph.html", owner="Your", datetimes=datetimes, syss=syss, dias=dias, sys_max_healthy=sys_healthy_results[0], sys_min_healthy=sys_healthy_results[1], dia_max_healthy=dia_healthy_results[0], dia_min_healthy=dia_healthy_results[1])
+
+@app.route("/shared_bp_graph")
+@login_required
+def shared_bp_graph():
+    if not session["shared_view_id"]:
+        return redirect("/share")
+    
+    conn = sqlite3.connect('health-tracker.db')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT year, month, day, time, sys, dia FROM records WHERE user_id = ? 
+                ORDER BY year ASC, month ASC, day ASC, time ASC''', (session["shared_view_id"],))
+
+    data = cur.fetchall()
+    
+    dates = [f"{row[0]}-{row[1]:02d}-{row[2]:02d}" for row in data]
+    times = [row[3] for row in data]
+    syss = [row[4] for row in data]
+    dias = [row[5] for row in data]
+
+    datetimes = [f"{date}T{time}" for date, time in zip(dates, times)]
+
+    cur.execute('''SELECT dob_year, dob_month, dob_day FROM users WHERE id = ?''', (session["shared_view_id"],))
+    dob = cur.fetchall()
+    sys_healthy_results = healthy(calculate_age(dob[0][0], dob[0][1], dob[0][2]), "sys")
+    dia_healthy_results = healthy(calculate_age(dob[0][0], dob[0][1], dob[0][2]), "dia")
+
+    cur.close()
+    conn.close()
+
+    return render_template("bp_graph.html", owner=f"{session["shared_view_username"]}'s", datetimes=datetimes, syss=syss, dias=dias, sys_max_healthy=sys_healthy_results[0], sys_min_healthy=sys_healthy_results[1], dia_max_healthy=dia_healthy_results[0], dia_min_healthy=dia_healthy_results[1])

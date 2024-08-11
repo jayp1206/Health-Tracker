@@ -15,6 +15,49 @@ def calculate_age(dob_year, dob_month, dob_day):
             age -=1
     return age
 
+def healthy(age, vital):
+    healthy_limits = []
+    if vital == "bpm":
+        if age <= 1:
+            healthy_limits.append(160)
+            healthy_limits.append(100)
+        elif age <= 12:
+            healthy_limits.append(120)
+            healthy_limits.append(70)
+        elif age > 12:
+            healthy_limits.append(100)
+            healthy_limits.append(60)
+
+    elif vital == "sys":
+        if age <= 1:
+            healthy_limits.append(90)
+            healthy_limits.append(70)
+        elif age <= 12:
+            healthy_limits.append(110)
+            healthy_limits.append(80)
+        elif 65 > age > 12:
+            healthy_limits.append(120)
+            healthy_limits.append(90)
+        elif age > 65:
+            healthy_limits.append(140)
+            healthy_limits.append(90)
+
+    elif vital == "dia":
+        if age <= 1:
+            healthy_limits.append(65)
+            healthy_limits.append(50)
+        elif age <= 12:
+            healthy_limits.append(75)
+            healthy_limits.append(50)
+        elif 65 > age > 12:
+            healthy_limits.append(80)
+            healthy_limits.append(60)
+        elif age > 65:
+            healthy_limits.append(90)
+            healthy_limits.append(60)
+    
+    return healthy_limits
+    
 def get_suggestions(age):
     bpm_recs = {
         "verylow":"Very Low BPM: Consult a doctor if you experience dizziness, fatigue, or fainting",
@@ -49,9 +92,8 @@ def get_suggestions(age):
     recent_dia = rows[0][2]
 
     suggestions = []
-
-    # Children (0-12 years)
-    if age < 13:
+    # Children (1-12 years)
+    if 1 < age < 13:
         if recent_bpm:
             if recent_bpm > 160:
                 suggestions.append(bpm_recs["veryhigh"])
@@ -190,3 +232,6 @@ def login_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+def zip_filter(list1, list2):
+    return zip(list1, list2)

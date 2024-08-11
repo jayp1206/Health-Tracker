@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block title %}
+{{ owner }} BPM Graph
+{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center">
+    {% if owner != "Your" %}
+        <a class="position-absolute start-0 link-opacity-75-hover" href="/share"><span style="font-size: 1.5vw;">Exit Shared</span></a>
+    {% endif %}
+    <h3 class="mx-auto">{{ owner }} BPM Graph</h3>
+</div>
+
+    <div style="display: flex; align-items: center; justify-content: center;">
+        <button id="zoom-in" style="height:20px; display: flex; align-items: center; justify-content: center; margin: 0 0.3vw;">+</button>
+        <button id="zoom-out" style="height:20px; display: flex; align-items: center; justify-content: center; margin: 0 0.3vw;">-</button>
+        <button id="reset-zoom" style="height:20px; display: flex; align-items: center; justify-content: center; margin: 0 0.3vw;">Reset</button>
+    </div>
+
+    <canvas id="lineChart" style="height: 33vw; max-height: 33vw;"></canvas>
+    <script>
+        var ctx = document.getElementById("lineChart").getContext("2d");
+        var lineChart = new Chart(ctx, {
+            type: "line", 
+            data: {
+                datasets: [{
+                    label: 'BPM',
+                    data: [
+                        {%  for datetime, bpm in datetimes|zip(bpms) %}
+                            { x: "{{ datetime }}", y: {{ bpm }} },
+                        {% endfor %}
+                    ],
+                    borderColor: 'rgb(75, 192, 192)',  
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            displayFormats: {
+                                millisecond: 'MMM d, HH:mm:ss.SSS',
+                                second: 'MMM d, HH:mm:ss',
+                                minute: 'MMM d, HH:mm',
+                                hour: 'MMM d, HH:mm',
+                                day: 'MMM d',
+                                week: 'MMM d',
+                                month: 'MMM YYYY',
+                                quarter: 'MMM YYYY',
+                                year: 'YYYY'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'BPM'
+                        }
+                    }
+                },
+                plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                                speed: 0.1,
+                            },
+                            pinch: {
+                                enabled: true,
+                                speed: 0.1,
+                            },
+                            mode: 'xy',
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'xy',
+                        },
+                    },
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                yMin: {{ max_healthy }},
+                                yMax: {{ max_healthy }},
+                                borderColor: 'rgb(75, 192, 192)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    content: 'Max Healthy BPM',
+                                    display: false,
+                                    position: 'start'
+                                }
+                            },
+                            line2: {
+                                type: 'line',
+                                yMin: {{ min_healthy }},
+                                yMax: {{ min_healthy }},
+                                borderColor: 'rgb(75, 192, 192)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    content: 'Min Healthy BPM',
+                                    display: false,
+                                    position: 'start'
+                                }
+                            }   
+                        }
+                    }
+                }
+            }
+        });
+
+        lineChart.options.plugins.zoom.zoom.onZoomComplete = function(chart, args) {
+            console.log('Zoom completed');
+            updateTimeUnit();
+        };
+
+        lineChart.options.plugins.zoom.pan.onPanComplete = function(chart, args) {
+            console.log('Pan completed');
+            updateTimeUnit();
+        };
+
+        updateTimeUnit();
+
+        function updateTimeUnit() {
+            var diff = lineChart.scales.x.max - lineChart.scales.x.min;
+            var diffDays = diff / (1000 * 60 * 60 * 24);
+
+            let unit, format;
+            if (diffDays > 365 * 2) {
+                unit = 'year';
+                format = 'yyyy';
+            } else if (diffDays > 60) {
+                unit = 'month';
+                format = 'MMM yyyy';
+            } else if (diffDays > 2) {
+                unit = 'day';
+                format = 'MMM d';
+            } else if (diffDays > 1/24) {
+                unit = 'hour';
+                format = 'MMM d, h:mm a';
+            } else {
+                unit = 'minute';
+                format = 'MMM d, h:mm:ss a';
+            }
+
+
+            if (diff < 60000) { // Less than 1 minute
+                lineChart.options.scales.x.time.stepSize = 1; // Step size of 1 second
+            }
+
+            lineChart.options.scales.x.time.unit = unit;
+            lineChart.options.scales.x.time.displayFormats[unit] = format;
+            lineChart.update();
+        }
+
+        document.getElementById('zoom-in').addEventListener('click', function() {
+            lineChart.zoom(1.2); // Zoom in by 20%
+            lineChart.resize();
+            updateTimeUnit();
+        });
+
+        document.getElementById('zoom-out').addEventListener('click', function() {
+            lineChart.zoom(0.8); // Zoom out by 20%
+            lineChart.resize();
+            updateTimeUnit();
+        });
+
+        document.getElementById('reset-zoom').addEventListener('click', function() {
+            lineChart.resetZoom(); // Reset zoom to the original level
+            lineChart.resize();
+            updateTimeUnit();
+        });
+    </script>
+{% endblock %}

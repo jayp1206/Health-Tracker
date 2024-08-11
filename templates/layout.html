@@ -2,48 +2,82 @@
 
 <html lang="en">
     <head>
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script>
         <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@latest"></script>
         <title>Health Tracker: {% block title %}{% endblock %}</title>
+        <style>
+            .pt-5 {
+                padding-top: 2rem !important; /* Adjust as needed */
+            }
+    
+            .py-5 {
+                padding-top: 2rem !important; /* Adjust as needed */
+                padding-bottom: 1rem !important; /* Adjust as needed */
+            }
+        </style>
     </head>
     <body>
         <nav class="navbar navbar-dark  navbar-expand-md bg-dark">
             <div class="container-fluid">
+
                 <a class="navbar-brand" href="#">
                     <img src="static/images/Heart-rate-symbol.png" style="height:5vw" class=" img-fluid align-center" alt='Image Of Heart'>
                     <span class="align-center" style="font-size:larger">Health Tracker</span>
                 </a>
-                <button aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler" data-bs-target="#navbar" data-bs-toggle="collapse" type="button">
+
+                <button aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler" data-target="#navbar" data-toggle="collapse" type="button">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="collapse navbar-collapse" id="navbar">
-                {% if session["user_id"] %}
-                    {% if session["shared-view"] %}
-                        <ul class="navbar-nav me-auto d-flex align-items-center">
-                            <li><a class="nav-item nav-link" href="/">Data</a></li>
-                            <li><a class="nav-item nav-link" href="/graphs">Graphs</a></li>
+                    {% if session["user_id"] %}
+                        {% if session["shared_view_id"] %}
+                            <ul class="navbar-nav me-auto d-flex align-items-center">
+                                <li><a class="nav-item nav-link" style="margin-left: 1vw;"href="/shared_data">{{ session["shared_view_username"] }}'s Data</a></li>
+
+                                <li class="nav-item" style="margin-left: 2vw;"></li>
+
+                                <li><a class="nav-item nav-link" href="/shared_bpm_graph">BPM Graph</a></li>
+                                <li><a class="nav-item nav-link" href="/shared_bp_graph">BP Graph</a></li>
+                                <li><a class="nav-item nav-link" href="/shared_weight_graph">Weight Graph</a></li>
+                            </ul>
+
+                        {% else %}
+                            <ul class="navbar-nav me-auto d-flex align-items-center">
+                                <li><a class="nav-item nav-link" style="margin-left: 1vw;" href="/">My Data</a></li>
+                                <li><a class="nav-item nav-link" href="/enter">Enter Data</a></li>
+
+                                <li class="nav-item" style="margin-left: 2vw;"></li>
+
+                                <li><a class="nav-item nav-link" href="/bpm_graph">BPM Graph</a></li>
+                                <li><a class="nav-item nav-link" href="/bp_graph">BP Graph</a></li>
+                                <li><a class="nav-item nav-link" href="/weight_graph">Weight Graph</a></li>
+
+                                <li class="nav-item" style="margin-left: 2vw;"></li>
+
+                                <li><a class="nav-item nav-link" href="/share">Share/View Shared</a></li>
+                            </ul>
+                        {% endif %}
+
+                        <ul class="navbar-nav ml-auto d-flex align-items-center">
+                            <li><a class="nav-item nav-link" href="/logout">Log Out</a></li>
                         </ul>
 
                     {% else %}
-                        <ul class="navbar-nav me-auto d-flex align-items-center">
-                            <li><a class="nav-item nav-link" href="/">My Data</a></li>
-                            <li><a class="nav-item nav-link" href="/enter">Enter Data</a></li>
-                            <li><a class="nav-item nav-link" href="/graphs">Graphs</a></li>
-                            <li><a class="nav-item nav-link" href="/share">Share/View Shared</a></li>
+                        <ul class="navbar-nav ml-auto d-flex align-items-center">
+                            <li class="nav-item"><a class="nav-link" href="/register">Sign Up</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/login">Log In</a></li>
                         </ul>
                     {% endif %}
-
-                    <ul class="navbar-nav ml-auto d-flex align-items-center">
-                        <li><a class="nav-item nav-link" href="/logout">Log Out</a></li>
-                    </ul>
-
-                {% else %}
-                    <ul class="navbar-nav ml-auto d-flex align-items-center">
-                        <li class="nav-item"><a class="nav-link" href="/register">Sign Up</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/login">Log In</a></li>
-                    </ul>
-                {% endif %}
                 </div>
             </div>
         </nav>
@@ -64,9 +98,5 @@
         <main class="container py-5 text-center">
             {% block main %}{% endblock %}
         </main>
-
-        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     </body>
 </html>

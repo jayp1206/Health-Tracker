@@ -5,14 +5,18 @@ My Data
 {% endblock %}
 
 {% block main %}
-<p>
-    <ul class="list-group">
-    {% for suggestion in suggestions %}
-        <li class="list-group-item list-group-item-info">{{ suggestion }}</li>
-    {% endfor %}
-    </ul>
-</p>
+<h3>Your Data/Suggestions:</h3>
+
 <br>
+
+<ul class="list-group">
+{% for suggestion in suggestions %}
+    <li class="list-group-item list-group-item-info">{{ suggestion }}</li>
+{% endfor %}
+</ul>
+
+<br>
+
 <table class="table">
     <thead class="thead-dark">
         <tr>    
@@ -20,6 +24,7 @@ My Data
             <th scope="column">BPM</th>
             <th scope="column">BP (Sys/Dia)</th>
             <th scope="column">Weight</th>
+            <th scope="column"></th>
         </tr>
     </thead>
     <tbody>
@@ -29,6 +34,12 @@ My Data
             <td>{{ row[4] }}</td>
             <td>{{ row[5] }}/{{ row[6] }}</td>
             <td>{{ row[7] }}</td>
+            <td>
+                <form action="/delete_entry" method="post">
+                    <input type="hidden" name="record_id" value="{{ row[8] }}">
+                    <button class="btn btn-primary bi bi-trash" type="submit"></button>
+                </form>
+            </td>
         </tr>
     {% endfor %}
     </tbody>
