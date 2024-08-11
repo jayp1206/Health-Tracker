@@ -411,7 +411,7 @@ def shared_bpm_graph():
     cur.close()
     conn.close()
 
-    return render_template("bpm_graph.html", owner=f"{session["shared_view_username"]}'s", datetimes=datetimes, bpms=bpms, max_healthy=healthy_results[0], min_healthy=healthy_results[1])
+    return render_template("bpm_graph.html", owner=f"{session['shared_view_username']}'s", datetimes=datetimes, bpms=bpms, max_healthy=healthy_results[0], min_healthy=healthy_results[1])
 
 @app.route("/weight_graph")
 @login_required
@@ -460,7 +460,7 @@ def shared_weight_graph():
     cur.close()
     conn.close()
 
-    return render_template("weight_graph.html", owner=f"{session["shared_view_username"]}'s", datetimes=datetimes, weights=weights)
+    return render_template("weight_graph.html", owner=f"{session['shared_view_username']}'s", datetimes=datetimes, weights=weights)
 
 @app.route("/bp_graph")
 @login_required
@@ -521,4 +521,4 @@ def shared_bp_graph():
     cur.close()
     conn.close()
 
-    return render_template("bp_graph.html", owner=f"{session["shared_view_username"]}'s", datetimes=datetimes, syss=syss, dias=dias, sys_max_healthy=sys_healthy_results[0], sys_min_healthy=sys_healthy_results[1], dia_max_healthy=dia_healthy_results[0], dia_min_healthy=dia_healthy_results[1])
+    return render_template("bp_graph.html", owner=f"{session['shared_view_username']}'s", datetimes=datetimes, syss=syss, dias=dias, sys_max_healthy=sys_healthy_results[0], sys_min_healthy=sys_healthy_results[1], dia_max_healthy=dia_healthy_results[0], dia_min_healthy=dia_healthy_results[1])
