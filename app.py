@@ -62,10 +62,11 @@ def index():
 def delete_entry():
     delete_record_id = request.form.get("record_id")
 
-    conn = sqlite3.connect('health-tracker.db', autocommit=True)
+    conn = sqlite3.connect('health-tracker.db')
     cur = conn.cursor()
 
     cur.execute('''DELETE FROM records WHERE id = ?''', (delete_record_id,))
+    conn.commit()
 
     cur.close()
     conn.close()
@@ -157,11 +158,12 @@ def register():
             flash("Passwords must match", 'error')
             return render_template("register.html")
         
-        conn = sqlite3.connect('health-tracker.db', autocommit=True)
+        conn = sqlite3.connect('health-tracker.db')
         cur = conn.cursor()
         try:
             cur.execute("INSERT INTO users (username, hash, dob_year, dob_month, dob_day) VALUES (?, ?, ?, ?, ?)",
                        (new_username, generate_password_hash(new_password), int(year), int(month), int(day)))
+            conn.commit()
         except sqlite3.IntegrityError:
             flash("username is taken/already in use", 'error')
             return render_template("register.html")
@@ -215,11 +217,12 @@ def enter():
         else:
             time = now.strftime('%H:%M:%S')
     
-        conn = sqlite3.connect('health-tracker.db', autocommit=True)
+        conn = sqlite3.connect('health-tracker.db')
         cur = conn.cursor()
 
         cur.execute('''INSERT INTO records (bpm, sys, dia, weight, year, month, day, time, user_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (bpm, sys, dia, weight, year, month, day, time, session["user_id"]))
+        conn.commit()
          
         cur.close()
         conn.close()
@@ -259,7 +262,7 @@ def share():
 
         new_shared_user = request.form.get("share-user")
 
-        conn = sqlite3.connect('health-tracker.db', autocommit=True)
+        conn = sqlite3.connect('health-tracker.db')
         cur = conn.cursor()
 
         cur.execute('''SELECT username FROM users WHERE id IN (
@@ -301,6 +304,7 @@ def share():
         new_shared_user_id = cur.fetchone()[0]
         
         cur.execute('''INSERT INTO shared (owner_id, viewer_id) VALUES (?, ?)''', (session["user_id"], new_shared_user_id))
+        conn.commit()
 
         cur.close()
         conn.close()
@@ -312,10 +316,11 @@ def unshare():
     remove_user_id = request.form.get("user_id")
     remove_username = request.form.get("username")
 
-    conn = sqlite3.connect('health-tracker.db', autocommit=True)
+    conn = sqlite3.connect('health-tracker.db')
     cur = conn.cursor()
 
     cur.execute("DELETE FROM shared WHERE owner_id = ? AND viewer_id = ?", (session["user_id"], remove_user_id))
+    conn.commit()
 
     cur.close()
     conn.close()
