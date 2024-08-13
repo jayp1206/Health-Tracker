@@ -11,4 +11,4 @@ COPY . /Health-Tracker
 RUN pip install -r requirements.txt
 
 # Define the entry point for the container
-CMD ["gunicorn app:app"]
+CMD ["python3", "-m", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]
