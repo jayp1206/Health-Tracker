@@ -58,7 +58,7 @@ def healthy(age, vital):
     
     return healthy_limits
     
-def get_suggestions(age):
+def get_suggestions(age, id):
     bpm_recs = {
         "verylow":"Very Low BPM: Consult a doctor if you experience dizziness, fatigue, or fainting",
         "low":"Low BPM: Stay Hydrated, Get enough rest",
@@ -82,7 +82,7 @@ def get_suggestions(age):
     cur = conn.cursor()
 
     cur.execute('''SELECT bpm, sys, dia FROM records WHERE user_id = ? 
-                ORDER BY year DESC, month DESC, day DESC, time DESC LIMIT 1''', (session["user_id"],))
+                ORDER BY year DESC, month DESC, day DESC, time DESC LIMIT 1''', (id,))
         
     rows = cur.fetchall()
     if not rows:

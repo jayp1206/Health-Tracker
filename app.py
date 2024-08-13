@@ -54,7 +54,7 @@ def index():
     conn.close()
 
     age = calculate_age(dob_year, dob_month, dob_day)
-    suggestions = get_suggestions(age)
+    suggestions = get_suggestions(age, session["user_id"])
     
     return render_template("index.html", rows=rows, suggestions=suggestions)
 
@@ -357,7 +357,7 @@ def shared_data():
          conn.close()
 
          age = calculate_age(dob_year, dob_month, dob_day)
-         suggestions = get_suggestions(age)
+         suggestions = get_suggestions(age, session["shared_view_id"])
     
          return render_template("shared_data.html", rows=rows, suggestions=suggestions, username=session["shared_view_username"])
     
