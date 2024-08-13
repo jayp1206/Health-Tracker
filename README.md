@@ -24,6 +24,7 @@ Health tracker is a web application that allows users to log and track important
 ## How to Use it:
 
 ### Login:
+![Alt text](relative%20path/README-images/bpmgraph.png "Title")
 
 
 
