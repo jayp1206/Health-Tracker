@@ -141,7 +141,7 @@ def register():
             flash("Must enter password", 'error')
             return render_template("register.html")
         
-        elif not request.forn.get("dob"):
+        elif not request.form.get("dob"):
             flash("Must enter Date of Birth", 'error')
             return render_template("register.html")
         
