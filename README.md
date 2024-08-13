@@ -152,6 +152,7 @@ To use Health Tracker, you can visit this URL: https://healthtracker-76wq1tcx.b4
 
 5. Access the webapp:
     Open your browser and go to 'http://127.0.0.1:8000'.
+
     Others on your network can access it at 'http://youripaddress:8000' if your firewall allows it
 
 
@@ -175,4 +176,5 @@ To use Health Tracker, you can visit this URL: https://healthtracker-76wq1tcx.b4
     ```
 5. Access the webapp
     Open your browser and go to 'http://127.0.0.1:5000'.
+    
     Others on your network can access it at 'http://youripaddress:5000' if your firewall allows it
